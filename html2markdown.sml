@@ -22,62 +22,31 @@ fun tokenize_old(str) =
             end;
 
 (* convert str to token list by automata *)
-(* status abbrev: start -> s, tag start -> ts, string -> str, end -> e *)
-(* | current | next | input         | *)
-(* |---------+------+---------------| *)
-(* | s       | ts   | <             | *)
-(* | s       | str  | not <         | *)
-(* | ts      | e    | EOF           | *)
-(* | ts      | e    | >             | *)
-(* | ts      | ts   | not > and EOF | *)
-(* | str     | ts   | <             | *)
-(* | str     | e    | EOF           | *)
-(* | str     | str  | not <         | *)
-(* | e       | ts   | <             | *)
-(* | e       | str  | not <         | *)
-(* EOF is "0" here *)
-datatype status = START | TAG_START | END | STRING;
 fun tokenize(s) =
-    let fun automata (START, #"<") = TAG_START
-          | automata (START, _) = STRING
-          | automata (TAG_START, #">") = END
-          | automata (TAG_START, #"0") = END
-          | automata (TAG_START, _) = TAG_START
-          | automata (STRING, #"<") = TAG_START
-          | automata (STRING, #"0") = END
-          | automata (STRING, _) = STRING
-          | automata (END, #"<") = TAG_START
-          | automata (END, _) = STRING
-        val c = String.explode(s)@[#"0"] (* append character 0 to note EOF *)
-        fun help ([], _) = [""]
-          | help (n::ns, TAG_START) =
-            let val nx = automata(TAG_START, n)
-                val it = help(ns, nx)
-            in 
-                if nx = END then String.str(n)::it
-                else String.str(n)^(hd it)::(tl it) 
+    let val edges =
+            vector[ (* < > * *)
+                (* state 0 *)vector[0, 0, 0],
+                (* state 1 *)vector[2, 0, 0],
+                (* state 2 *)vector[2, 3, 2],
+                (* state 3 *)vector[2, 4, 4],
+                (* state 4 *)vector[2, 4, 4]]
+        val cs = String.explode(s)
+                  
+        fun c2i (#"<") = 0
+          | c2i (#">") = 1
+          | c2i (_) = 2
+        fun automata ([], _) = []
+          | automata (n::ns, cur) =
+            let val nx = Vector.sub(Vector.sub(edges, cur), c2i n)
+                val it = automata(ns, nx)
+            in case nx
+                of 3 => String.str(n)::it
+                 | 4 => String.str(n)::it (* TODO apply longest matching rule *)
+                 | 0 => [""]
+                 | _ => String.str(n)^hd it::tl it
             end
-          | help (n::ns, STRING) =
-            let val nx = automata(STRING, n)
-                val it = help(ns, nx)
-            in
-                if nx = END orelse nx = TAG_START then String.str(n)::it
-                else String.str(n)^(hd it)::(tl it) 
-            end
-          | help (n::ns, START) = 
-            let val nx = automata(START, n)
-                val it = help(ns, nx)
-            in 
-                String.str(n)^(hd it)::(tl it) 
-            end
-          | help (n::ns, END) = 
-            let val nx = automata(END, n)
-                val it = help(ns, nx)
-            in 
-                String.str(n)^(hd it)::(tl it) 
-            end
-    in 
-        help(c, START)
+    in
+        automata(cs, 1)
     end
 
 (* datatype status = START | TAG_START | TAG_END | STRING; *)
@@ -117,8 +86,8 @@ test_list_eq(tokenize_old("<p>ab</p>"), ["<p>", "ab", "</p>"]);
 
 (* test for tokenize_old *)
 test_list_eq(tokenize("<pa><a>"), ["<pa>","<a>"]);
-test_list_eq(tokenize("<pa>a"), ["<pa>","a"]);
+test_list_eq(tokenize("<pa>a<pa>"), ["<pa>","a", "<pa>"]);
 test_list_eq(tokenize("<paa>"), ["<paa>"]);
 test_list_eq(tokenize("<p>a</p>"), ["<p>", "a", "</p>"]);
 test_list_eq(tokenize("<p>ab</p>"), ["<p>", "ab", "</p>"]);
-test_list_eq(tokenize("<p><p>a</p>ad< b</p>"), ["<p>", "<p>", "a", "</p>", "ad< b", "</p>"]);
+test_list_eq(tokenize("<p><p>a</p>ad< b</p>"), ["<p>", "<p>", "a", "</p>", "ad", "< b</p>"]);
