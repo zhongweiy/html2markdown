@@ -29,7 +29,8 @@ fun tokenize(s) =
                 (* state 1 *)vector[2, 0, 0],
                 (* state 2 *)vector[2, 3, 2],
                 (* state 3 *)vector[2, 4, 4],
-                (* state 4 *)vector[2, 4, 4]]
+                (* state 4 *)vector[5, 4, 4],
+                (* state 5 *)vector[2, 3, 2]]
         val cs = String.explode(s)
                   
         fun c2i (#"<") = 0
@@ -41,7 +42,7 @@ fun tokenize(s) =
                 val it = automata(ns, nx)
             in case nx
                 of 3 => String.str(n)::it
-                 | 4 => String.str(n)::it (* TODO apply longest matching rule *)
+                 | 5 => ""::(String.str(n)^hd it::tl it) (* case like: "abc</p>" when n is "<" *)
                  | 0 => [""]
                  | _ => String.str(n)^hd it::tl it
             end
