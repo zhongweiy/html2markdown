@@ -32,7 +32,7 @@ fun tokenize(s) =
                 (* state 4 *)vector[5, 4, 4],
                 (* state 5 *)vector[2, 3, 2]]
         val cs = String.explode(s)
-                  
+
         fun c2i (#"<") = 0
           | c2i (#">") = 1
           | c2i (_) = 2
@@ -49,10 +49,6 @@ fun tokenize(s) =
     in
         automata(cs, 1)
     end
-
-(* datatype status = START | TAG_START | TAG_END | STRING; *)
-(* (* convert str to token list. *) *)
-(* fun tokenize_old(str) = *)
 
 (* convert html string to markdown string *)
 (* fun html2markdown(input) = *)
